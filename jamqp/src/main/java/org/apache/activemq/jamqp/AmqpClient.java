@@ -98,7 +98,13 @@ public class AmqpClient implements ClientTcpTransport.TransportListener {
      */
     public void connect(URI broker, String username, String password) throws Exception {
         if (username == null && password != null) {
-            throw new IllegalAccessException("Password must be null if user name value is null");
+            throw new IllegalArgumentException("Password must be null if user name value is null");
+        }
+
+        if (broker.getScheme().equals("tcp")) {
+
+        } else {
+            throw new IllegalArgumentException("Client only support TCP currently.");
         }
     }
 
