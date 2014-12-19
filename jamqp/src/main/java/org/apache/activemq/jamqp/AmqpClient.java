@@ -18,6 +18,7 @@ package org.apache.activemq.jamqp;
 
 import java.net.URI;
 
+import org.apache.activemq.jamqp.support.ClientTcpTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,13 +69,20 @@ public class AmqpClient {
             throw new IllegalArgumentException("Password must be null if user name value is null");
         }
 
+        ClientTcpTransport transport = null;
+
         if (remoteURI.getScheme().equals("tcp")) {
-            LOG.info("Creating new connection to peer: {}", remoteURI);
+            transport = new ClientTcpTransport(remoteURI);
         } else {
             throw new IllegalArgumentException("Client only support TCP currently.");
         }
 
-        return null;
+        AmqpConnection connection = new AmqpConnection(transport, username, password);
+
+        LOG.info("Creating new connection to peer: {}", remoteURI);
+        connection.connect();
+
+        return connection;
     }
 
     /**

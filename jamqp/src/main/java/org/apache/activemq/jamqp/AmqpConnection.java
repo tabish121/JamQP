@@ -22,23 +22,30 @@ import org.slf4j.LoggerFactory;
 
 public class AmqpConnection implements ClientTcpTransport.TransportListener, AmqpResource {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AmqpClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AmqpConnection.class);
 
     private final ScheduledExecutorService serializer;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Collector protonCollector = new CollectorImpl();
+    private final ClientTcpTransport transport;
+
+    private final String username;
+    private final String password;
+    private final URI remoteURI;
 
     private AmqpClientListener listener;
-    private ClientTcpTransport transport;
     private Transport protonTransport;
     private Connection protonConnection;
 
-    private String username;
-    private String password;
-    private URI remoteURI;
     private boolean authenticated;
 
-    public AmqpConnection() {
+    public AmqpConnection(ClientTcpTransport transport, String username, String password) {
+
+        this.transport = transport;
+        this.username = username;
+        this.password = password;
+        this.remoteURI = transport.getRemoteURI();
+
         this.serializer = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
 
             @Override
@@ -49,6 +56,16 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
                 return serial;
             }
         });
+
+        this.transport.setTransportListener(this);
+    }
+
+    protected void connect() throws Exception {
+        transport.connect();
+    }
+
+    public boolean isConnected() {
+        return transport.isConnected();
     }
 
     public void close() {
@@ -58,8 +75,11 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
                 return;
             }
 
-            protonConnection.close();
-            pumpToProtonTransport();
+            if (protonConnection != null) {
+                protonConnection.close();
+                pumpToProtonTransport();
+            }
+
             transport.close();
         }
     }
@@ -164,6 +184,27 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
     public String getRemoteErrorMessage() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    /**
+     * @return the user name that was used to authenticate this connection.
+     */
+    public String getUsername() {
+        return username;
+    }
+
+    /**
+     * @return the password that was used to authenticate this connection.
+     */
+    public String getPassword() {
+        return password;
+    }
+
+    /**
+     * @return the URI of the remote peer this connection attached to.
+     */
+    public URI getRemoteURI() {
+        return remoteURI;
     }
 
     @Override

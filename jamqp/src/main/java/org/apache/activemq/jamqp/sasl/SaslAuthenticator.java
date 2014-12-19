@@ -22,6 +22,7 @@ import java.util.List;
 
 import javax.security.sasl.SaslException;
 
+import org.apache.activemq.jamqp.AmqpClient;
 import org.apache.qpid.proton.engine.Sasl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -99,8 +99,7 @@ public class ClientTcpTransport implements Runnable {
      * @param remoteLocation
      *        The remote location where this transport should connection to.
      */
-    public ClientTcpTransport(TransportListener listener, URI remoteLocation) {
-        this.listener = listener;
+    public ClientTcpTransport(URI remoteLocation) {
         this.remoteLocation = remoteLocation;
 
         Socket temp = null;
@@ -116,6 +115,10 @@ public class ClientTcpTransport implements Runnable {
     public void connect() throws IOException {
         if (connectionError.get() != null) {
             throw IOExceptionSupport.create(connectionError.get());
+        }
+
+        if (listener == null) {
+            throw new IllegalStateException("Cannot connect until a listener has been set.");
         }
 
         if (socket == null) {
@@ -191,6 +194,10 @@ public class ClientTcpTransport implements Runnable {
     public void send(Buffer output) throws IOException {
         checkConnected();
         send(output.toByteBuffer());
+    }
+
+    public URI getRemoteURI() {
+        return this.remoteLocation;
     }
 
     public boolean isConnected() {
