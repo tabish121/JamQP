@@ -27,8 +27,8 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
     private final ScheduledExecutorService serializer;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Collector protonCollector = new CollectorImpl();
-    private final AmqpClientListener listener;
 
+    private AmqpClientListener listener;
     private ClientTcpTransport transport;
     private Transport protonTransport;
     private Connection protonConnection;
@@ -38,9 +38,7 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
     private URI remoteURI;
     private boolean authenticated;
 
-    public AmqpConnection(AmqpClientListener listener) {
-        this.listener = listener;
-
+    public AmqpConnection() {
         this.serializer = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
 
             @Override
