@@ -3,43 +3,62 @@ package org.apache.activemq.jamqp;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.activemq.jamqp.support.AsyncResult;
+import org.apache.activemq.jamqp.sasl.SaslAuthenticator;
+import org.apache.activemq.jamqp.support.ClientFuture;
 import org.apache.activemq.jamqp.support.ClientTcpTransport;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
+import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.fusesource.hawtbuf.Buffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AmqpConnection implements ClientTcpTransport.TransportListener, AmqpResource {
+public class AmqpConnection extends AmqpAbstractResource<Connection> implements ClientTcpTransport.TransportListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(AmqpConnection.class);
+
+    private static final int DEFAULT_MAX_FRAME_SIZE = 1024 * 1024 * 1;
+    // NOTE: Limit default channel max to signed short range to deal with
+    //       brokers that don't currently handle the unsigned range well.
+    private static final int DEFAULT_CHANNEL_MAX = 32767;
+    public static final long DEFAULT_CONNECT_TIMEOUT = 15000;
+    public static final long DEFAULT_CLOSE_TIMEOUT = 15000;
 
     private final ScheduledExecutorService serializer;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Collector protonCollector = new CollectorImpl();
     private final ClientTcpTransport transport;
+    private final Transport protonTransport = Transport.Factory.create();
 
     private final String username;
     private final String password;
     private final URI remoteURI;
 
     private AmqpClientListener listener;
-    private Transport protonTransport;
-    private Connection protonConnection;
+    private SaslAuthenticator authenticator;
 
+    private String containerId;
+    private boolean connected;
     private boolean authenticated;
+    private int channelMax = DEFAULT_CHANNEL_MAX;
+    private long connectTimeout = DEFAULT_CONNECT_TIMEOUT;
+    private long closeTimeout = DEFAULT_CLOSE_TIMEOUT;
 
     public AmqpConnection(ClientTcpTransport transport, String username, String password) {
+        super(Connection.Factory.create());
+
+        getEndpoint().collect(protonCollector);
 
         this.transport = transport;
         this.username = username;
@@ -62,128 +81,87 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
 
     protected void connect() throws Exception {
         transport.connect();
+
+        final ClientFuture future = new ClientFuture();
+        serializer.execute(new Runnable() {
+            @Override
+            public void run() {
+                getEndpoint().setContainer(safeGetContainerId());
+                getEndpoint().setHostname(remoteURI.getHost());
+
+                protonTransport.setMaxFrameSize(getMaxFrameSize());
+                protonTransport.setChannelMax(getChannelMax());
+                protonTransport.bind(getEndpoint());
+                Sasl sasl = protonTransport.sasl();
+                if (sasl != null) {
+                    sasl.client();
+                }
+                authenticator = new SaslAuthenticator(sasl, username, password);
+                open(future);
+
+                pumpToProtonTransport();
+            }
+        });
+
+        if (closeTimeout < 0) {
+            future.sync();
+        } else {
+            future.sync(closeTimeout, TimeUnit.MILLISECONDS);
+        }
     }
 
     public boolean isConnected() {
-        return transport.isConnected();
+        return transport.isConnected() && connected;
     }
 
     public void close() {
         if (closed.compareAndSet(false, true)) {
+            final ClientFuture request = new ClientFuture();
+            serializer.execute(new Runnable() {
 
-            if (!transport.isConnected()) {
-                return;
+                @Override
+                public void run() {
+                    try {
+
+                        // If we are not connected then there is nothing we can do now
+                        // just signal success.
+                        if (!transport.isConnected()) {
+                            request.onSuccess();
+                        }
+
+                        if (getEndpoint() != null) {
+                            close(request);
+                        } else {
+                            request.onSuccess();
+                        }
+
+                        pumpToProtonTransport();
+                    } catch (Exception e) {
+                        LOG.debug("Caught exception while closing proton connection");
+                    }
+                }
+            });
+
+            try {
+                if (closeTimeout < 0) {
+                    request.sync();
+                } else {
+                    request.sync(closeTimeout, TimeUnit.MILLISECONDS);
+                }
+            } catch (IOException e) {
+                LOG.warn("Error caught while closing Provider: ", e.getMessage());
+            } finally {
+                if (transport != null) {
+                    try {
+                        transport.close();
+                    } catch (Exception e) {
+                        LOG.debug("Cuaght exception while closing down Transport: {}", e.getMessage());
+                    }
+                }
+
+                serializer.shutdown();
             }
-
-            if (protonConnection != null) {
-                protonConnection.close();
-                pumpToProtonTransport();
-            }
-
-            transport.close();
         }
-    }
-
-    @Override
-    public void open(AsyncResult request) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public boolean isOpen() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean isAwaitingOpen() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void opened() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void close(AsyncResult request) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public boolean isClosed() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean isAwaitingClose() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void closed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void failed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void remotelyClosed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void failed(Exception cause) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processStateChange() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processDeliveryUpdates() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processFlowUpdates() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public boolean hasRemoteError() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public Exception getRemoteError() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public String getRemoteErrorMessage() {
-        // TODO Auto-generated method stub
-        return null;
     }
 
     /**
@@ -205,6 +183,39 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
      */
     public URI getRemoteURI() {
         return remoteURI;
+    }
+
+    /**
+     * @return the container ID that will be set as the container Id.
+     */
+    public String getContainerId() {
+        return this.containerId;
+    }
+
+    /**
+     * Sets the container Id that will be configured on the connection prior to
+     * connecting to the remote peer.  Calling this after connect has no effect.
+     *
+     * @param containerId
+     * 		  the container Id to use on the connection.
+     */
+    public void setContainerId(String containerId) {
+        this.containerId = containerId;
+    }
+
+    /**
+     * @return the currently set Max Frame Size value.
+     */
+    public int getMaxFrameSize() {
+        return DEFAULT_MAX_FRAME_SIZE;
+    }
+
+    public int getChannelMax() {
+        return channelMax;
+    }
+
+    public void setChannelMax(int channelMax) {
+        this.channelMax = channelMax;
     }
 
     @Override
@@ -310,11 +321,19 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
         }
     }
 
-    /**
-     *
-     */
     private void processSaslAuthentication() {
-        // TODO Auto-generated method stub
+        if (connected || authenticator == null) {
+            return;
+        }
+
+        try {
+            if (authenticator.authenticate()) {
+                authenticator = null;
+                authenticated = true;
+            }
+        } catch (SecurityException ex) {
+            failed(ex);
+        }
     }
 
     private void pumpToProtonTransport() {
@@ -332,5 +351,14 @@ public class AmqpConnection implements ClientTcpTransport.TransportListener, Amq
         } catch (IOException e) {
             fireClientException(e);
         }
+    }
+
+    private String safeGetContainerId() {
+        String containerId = getContainerId();
+        if (containerId == null || containerId.isEmpty()) {
+            containerId = UUID.randomUUID().toString();
+        }
+
+        return containerId;
     }
 }
