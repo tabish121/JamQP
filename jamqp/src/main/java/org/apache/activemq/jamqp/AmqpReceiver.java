@@ -16,115 +16,33 @@
  */
 package org.apache.activemq.jamqp;
 
-import java.io.IOException;
-
-import org.apache.activemq.jamqp.support.AsyncResult;
+import org.apache.qpid.proton.engine.Receiver;
 
 /**
- *
+ * Receiver class that manages a Proton receiver endpoint.
  */
-public class AmqpReceiver implements AmqpResource {
+public class AmqpReceiver extends AmqpAbstractResource<Receiver> {
 
-    @Override
-    public void open(AsyncResult request) {
-        // TODO Auto-generated method stub
+    private AmqpSession session;
 
+    /**
+     * Create a new receiver instance.
+     *
+     * @param session
+     * 		  The parent session that created the receiver.
+     * @param receiver
+     *        The proton receiver that will be managed by this class.
+     */
+    public AmqpReceiver(AmqpSession session, Receiver receiver) {
+        super(receiver);
+
+        this.session = session;
     }
 
-    @Override
-    public boolean isOpen() {
-        // TODO Auto-generated method stub
-        return false;
+    /**
+     * @return this session's parent AmqpSession.
+     */
+    public AmqpSession getSession() {
+        return session;
     }
-
-    @Override
-    public boolean isAwaitingOpen() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void opened() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void close(AsyncResult request) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public boolean isClosed() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public boolean isAwaitingClose() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public void closed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void failed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void remotelyClosed() {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void failed(Exception cause) {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processStateChange() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processDeliveryUpdates() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void processFlowUpdates() throws IOException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public boolean hasRemoteError() {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    @Override
-    public Exception getRemoteError() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public String getRemoteErrorMessage() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
 }

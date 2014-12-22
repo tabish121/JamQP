@@ -16,17 +16,33 @@
  */
 package org.apache.activemq.jamqp;
 
+import org.apache.qpid.proton.engine.Session;
+
 /**
- *
+ * Session class that manages a Proton session endpoint.
  */
-public class AmqpSession {
+public class AmqpSession extends AmqpAbstractResource<Session> {
+
+    private final AmqpConnection connection;
 
     /**
+     * Create a new session instance.
      *
+     * @param connection
+     * 		  The parent connection that created the session.
+     * @param session
+     *        The proton session that will be managed by this class.
      */
-    public void processStateChange() {
-        // TODO Auto-generated method stub
+    public AmqpSession(AmqpConnection connection, Session session) {
+        super(session);
 
+        this.connection = connection;
     }
 
+    /**
+     * @return this session's parent AmqpConnection.
+     */
+    public AmqpConnection getConnection() {
+        return connection;
+    }
 }
