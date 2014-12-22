@@ -23,16 +23,17 @@ import java.util.concurrent.TimeUnit;
 /**
  * Asynchronous Client Future class.
  */
-public class ClientFuture extends WrappedAsyncResult {
+public class ClientFuture<R> extends WrappedAsyncResult<R> {
 
     protected final CountDownLatch latch = new CountDownLatch(1);
     protected Throwable error;
+    protected R result;
 
     public ClientFuture() {
         super(null);
     }
 
-    public ClientFuture(AsyncResult watcher) {
+    public ClientFuture(AsyncResult<R> watcher) {
         super(watcher);
     }
 
@@ -49,9 +50,15 @@ public class ClientFuture extends WrappedAsyncResult {
     }
 
     @Override
-    public void onSuccess() {
+    public void onSuccess(R result) {
+        this.result = result;
         latch.countDown();
-        super.onSuccess();
+        super.onSuccess(result);
+    }
+
+    @Override
+    public void onSuccess() {
+        super.onSuccess(null);
     }
 
     /**
@@ -66,14 +73,15 @@ public class ClientFuture extends WrappedAsyncResult {
      *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public void sync(long amount, TimeUnit unit) throws IOException {
+    public R sync(long amount, TimeUnit unit) throws IOException {
         try {
             latch.await(amount, unit);
         } catch (InterruptedException e) {
             Thread.interrupted();
             throw IOExceptionSupport.create(e);
         }
-        failOnError();
+
+        return getOrfailOnError();
     }
 
     /**
@@ -83,20 +91,22 @@ public class ClientFuture extends WrappedAsyncResult {
      *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public void sync() throws IOException {
+    public R sync() throws IOException {
         try {
             latch.await();
         } catch (InterruptedException e) {
             Thread.interrupted();
             throw IOExceptionSupport.create(e);
         }
-        failOnError();
+
+        return getOrfailOnError();
     }
 
-    private void failOnError() throws IOException {
+    private R getOrfailOnError() throws IOException {
         Throwable cause = error;
         if (cause != null) {
             throw IOExceptionSupport.create(cause);
         }
+        return result;
     }
 }

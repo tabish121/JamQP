@@ -116,7 +116,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
 
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            final ClientFuture request = new ClientFuture();
+            final ClientFuture<Void> request = new ClientFuture<Void>();
             serializer.execute(new Runnable() {
 
                 @Override
@@ -162,6 +162,34 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
                 serializer.shutdown();
             }
         }
+    }
+
+    /**
+     * Creates a new Session instance used to create AMQP resources like
+     * senders and receivers.
+     *
+     * @return a new AmqpSession that can be used to create links.
+     *
+     * @throws Exception if an error occurs during creation.
+     */
+    public AmqpSession createSession() throws Exception {
+        checkClosed();
+
+        final ClientFuture<AmqpSession> request = new ClientFuture<AmqpSession>();
+        serializer.execute(new Runnable() {
+
+            @Override
+            public void run() {
+                checkClosed();
+
+                AmqpSession session = new AmqpSession(AmqpConnection.this, getEndpoint().session());
+                session.open(request);
+
+                pumpToProtonTransport();
+            }
+        });
+
+        return request.sync();
     }
 
     /**
@@ -259,6 +287,12 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
         AmqpClientListener listener = this.listener;
         if (listener != null) {
             listener.onClientException(ex);
+        }
+    }
+
+    protected void checkClosed() throws IllegalStateException {
+        if (closed.get()) {
+            throw new IllegalStateException("The Connection is already closed");
         }
     }
 
