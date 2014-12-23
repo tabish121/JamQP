@@ -73,7 +73,7 @@ public abstract class AmqpAbstractResource<E extends Endpoint> implements AmqpRe
     @Override
     public void opened() {
         if (this.openRequest != null) {
-            this.openRequest.onSuccess();
+            this.openRequest.onSuccess(this);
             this.openRequest = null;
         }
     }

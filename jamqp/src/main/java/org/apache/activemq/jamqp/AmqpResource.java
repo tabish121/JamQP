@@ -35,7 +35,7 @@ public interface AmqpResource {
      * @param request
      *        The initiating request that triggered this open call.
      */
-    void open(AsyncResult request);
+    <R extends AmqpResource> void open(AsyncResult request);
 
     /**
      * @return if the resource has moved to the opened state on the remote.

@@ -19,14 +19,14 @@ package org.apache.activemq.jamqp.support;
 /**
  * Base class used to wrap one AsyncResult with another.
  */
-public abstract class WrappedAsyncResult<R> implements AsyncResult<R> {
+public abstract class WrappedAsyncResult implements AsyncResult {
 
-    protected final AsyncResult<R> wrapped;
+    protected final AsyncResult wrapped;
 
     /**
      * Create a new WrappedAsyncResult for the target AsyncResult
      */
-    public WrappedAsyncResult(AsyncResult<R> wrapped) {
+    public WrappedAsyncResult(AsyncResult wrapped) {
         this.wrapped = wrapped;
     }
 
@@ -38,7 +38,7 @@ public abstract class WrappedAsyncResult<R> implements AsyncResult<R> {
     }
 
     @Override
-    public void onSuccess(R result) {
+    public void onSuccess(Object result) {
         if (wrapped != null) {
             wrapped.onSuccess(result);
         }
@@ -60,7 +60,7 @@ public abstract class WrappedAsyncResult<R> implements AsyncResult<R> {
         return false;
     }
 
-    public AsyncResult<R> getWrappedRequest() {
+    public AsyncResult getWrappedRequest() {
         return wrapped;
     }
 }

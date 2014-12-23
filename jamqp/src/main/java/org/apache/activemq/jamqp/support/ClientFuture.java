@@ -23,17 +23,17 @@ import java.util.concurrent.TimeUnit;
 /**
  * Asynchronous Client Future class.
  */
-public class ClientFuture<R> extends WrappedAsyncResult<R> {
+public class ClientFuture extends WrappedAsyncResult {
 
     protected final CountDownLatch latch = new CountDownLatch(1);
     protected Throwable error;
-    protected R result;
+    protected Object result;
 
     public ClientFuture() {
         super(null);
     }
 
-    public ClientFuture(AsyncResult<R> watcher) {
+    public ClientFuture(AsyncResult watcher) {
         super(watcher);
     }
 
@@ -50,7 +50,7 @@ public class ClientFuture<R> extends WrappedAsyncResult<R> {
     }
 
     @Override
-    public void onSuccess(R result) {
+    public void onSuccess(Object result) {
         this.result = result;
         latch.countDown();
         super.onSuccess(result);
@@ -58,7 +58,7 @@ public class ClientFuture<R> extends WrappedAsyncResult<R> {
 
     @Override
     public void onSuccess() {
-        super.onSuccess(null);
+        onSuccess(null);
     }
 
     /**
@@ -73,7 +73,7 @@ public class ClientFuture<R> extends WrappedAsyncResult<R> {
      *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public R sync(long amount, TimeUnit unit) throws IOException {
+    public Object sync(long amount, TimeUnit unit) throws IOException {
         try {
             latch.await(amount, unit);
         } catch (InterruptedException e) {
@@ -91,7 +91,7 @@ public class ClientFuture<R> extends WrappedAsyncResult<R> {
      *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public R sync() throws IOException {
+    public Object sync() throws IOException {
         try {
             latch.await();
         } catch (InterruptedException e) {
@@ -102,7 +102,7 @@ public class ClientFuture<R> extends WrappedAsyncResult<R> {
         return getOrfailOnError();
     }
 
-    private R getOrfailOnError() throws IOException {
+    private Object getOrfailOnError() throws IOException {
         Throwable cause = error;
         if (cause != null) {
             throw IOExceptionSupport.create(cause);

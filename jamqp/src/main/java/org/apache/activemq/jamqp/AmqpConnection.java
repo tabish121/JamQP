@@ -33,7 +33,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     //       brokers that don't currently handle the unsigned range well.
     private static final int DEFAULT_CHANNEL_MAX = 32767;
     public static final long DEFAULT_CONNECT_TIMEOUT = 15000;
-    public static final long DEFAULT_CLOSE_TIMEOUT = 15000;
+    public static final long DEFAULT_CLOSE_TIMEOUT = 30000;
 
     private final ScheduledExecutorService serializer;
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -103,10 +103,10 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             }
         });
 
-        if (closeTimeout < 0) {
+        if (connectTimeout < 0) {
             future.sync();
         } else {
-            future.sync(closeTimeout, TimeUnit.MILLISECONDS);
+            future.sync(connectTimeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -116,7 +116,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
 
     public void close() {
         if (closed.compareAndSet(false, true)) {
-            final ClientFuture<Void> request = new ClientFuture<Void>();
+            final ClientFuture request = new ClientFuture();
             serializer.execute(new Runnable() {
 
                 @Override
@@ -175,7 +175,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     public AmqpSession createSession() throws Exception {
         checkClosed();
 
-        final ClientFuture<AmqpSession> request = new ClientFuture<AmqpSession>();
+        final ClientFuture request = new ClientFuture();
         serializer.execute(new Runnable() {
 
             @Override
@@ -189,7 +189,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             }
         });
 
-        return request.sync();
+        return (AmqpSession) request.sync();
     }
 
     /**

@@ -19,7 +19,7 @@ package org.apache.activemq.jamqp.support;
 /**
  * Defines a result interface for Asynchronous operations.
  */
-public interface AsyncResult<R> {
+public interface AsyncResult {
 
     /**
      * If the operation fails this method is invoked with the Exception
@@ -37,7 +37,7 @@ public interface AsyncResult<R> {
      * @param result
      *        The value produced as a result of this asynchronous operation.
      */
-    void onSuccess(R result);
+    void onSuccess(Object result);
 
     /**
      * If the operation succeeds the resulting value produced is set to null and
