@@ -16,6 +16,9 @@
  */
 package org.apache.activemq.jamqp;
 
+import java.util.concurrent.ScheduledExecutorService;
+
+import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Session;
 
 /**
@@ -72,5 +75,19 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
      */
     public AmqpConnection getConnection() {
         return connection;
+    }
+
+    //----- Internal getters used from the child AmqpResource classes --------//
+
+    ScheduledExecutorService getScheduler() {
+        return connection.getScheduler();
+    }
+
+    Connection getProtonConnection() {
+        return connection.getProtonConnection();
+    }
+
+    void pumpToProtonTransport() {
+        connection.pumpToProtonTransport();
     }
 }

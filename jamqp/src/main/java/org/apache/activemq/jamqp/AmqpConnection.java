@@ -246,6 +246,36 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
         this.channelMax = channelMax;
     }
 
+    //----- Internal getters used from the child AmqpResource classes --------//
+
+    ScheduledExecutorService getScheduler() {
+        return this.serializer;
+    }
+
+    Connection getProtonConnection() {
+        return getEndpoint();
+    }
+
+    void pumpToProtonTransport() {
+        try {
+            boolean done = false;
+            while (!done) {
+                ByteBuffer toWrite = protonTransport.getOutputBuffer();
+                if (toWrite != null && toWrite.hasRemaining()) {
+                    transport.send(toWrite);
+                    protonTransport.outputConsumed();
+                } else {
+                    done = true;
+                }
+            }
+        } catch (IOException e) {
+            fireClientException(e);
+        }
+    }
+
+
+    //----- Transport listener event hooks -----------------------------------//
+
     @Override
     public void onData(final Buffer input) {
         serializer.execute(new Runnable() {
@@ -367,23 +397,6 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             }
         } catch (SecurityException ex) {
             failed(ex);
-        }
-    }
-
-    private void pumpToProtonTransport() {
-        try {
-            boolean done = false;
-            while (!done) {
-                ByteBuffer toWrite = protonTransport.getOutputBuffer();
-                if (toWrite != null && toWrite.hasRemaining()) {
-                    transport.send(toWrite);
-                    protonTransport.outputConsumed();
-                } else {
-                    done = true;
-                }
-            }
-        } catch (IOException e) {
-            fireClientException(e);
         }
     }
 
