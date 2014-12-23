@@ -40,6 +40,34 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
     }
 
     /**
+     * Create a sender instance using the given address
+     *
+     * @param address
+     * 	      the address to which the sender will produce its messages.
+     *
+     * @return a newly created sender that is ready for use.
+     *
+     * @throws Exception if an error occurs while creating the sender.
+     */
+    public AmqpSender createSender(String address) throws Exception {
+        return null;
+    }
+
+    /**
+     * Create a receiver instance using the given address
+     *
+     * @param address
+     * 	      the address to which the receiver will subscribe for its messages.
+     *
+     * @return a newly created receiver that is ready for use.
+     *
+     * @throws Exception if an error occurs while creating the receiver.
+     */
+    public AmqpReceiver createReceiver(String address) throws Exception {
+        return null;
+    }
+
+    /**
      * @return this session's parent AmqpConnection.
      */
     public AmqpConnection getConnection() {
