@@ -16,6 +16,8 @@
  */
 package org.apache.activemq.jamqp;
 
+import java.io.IOException;
+
 import org.apache.qpid.proton.engine.Sender;
 
 /**
@@ -37,6 +39,18 @@ public class AmqpSender extends AmqpAbstractResource<Sender> {
     public AmqpSender(AmqpSession session, String address) {
         this.session = session;
         this.address = address;
+    }
+
+    /**
+     * Sends the given message to this senders assigned address.
+     *
+     * @param message
+     *        the message to send.
+     *
+     * @throws IOException if an error occurs during the send.
+     */
+    public void send(AmqpMessage message) throws IOException {
+
     }
 
     /**
