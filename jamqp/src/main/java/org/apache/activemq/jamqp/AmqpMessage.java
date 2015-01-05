@@ -42,4 +42,17 @@ public class AmqpMessage {
 
     }
 
+    /**
+     * @return the AMQP Delivery object linked to a received message.
+     */
+    public Delivery getWrappedDelivery() {
+        return delivery;
+    }
+
+    /**
+     * @return the AMQP Message that is wrapped by this object.
+     */
+    public Message getWrappedMessage() {
+        return message;
+    }
 }
