@@ -38,13 +38,6 @@ public abstract class WrappedAsyncResult implements AsyncResult {
     }
 
     @Override
-    public void onSuccess(Object result) {
-        if (wrapped != null) {
-            wrapped.onSuccess(result);
-        }
-    }
-
-    @Override
     public void onSuccess() {
         if (wrapped != null) {
             wrapped.onSuccess();

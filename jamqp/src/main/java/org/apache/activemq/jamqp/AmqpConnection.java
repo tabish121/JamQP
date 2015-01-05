@@ -56,8 +56,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     private long closeTimeout = DEFAULT_CLOSE_TIMEOUT;
 
     public AmqpConnection(ClientTcpTransport transport, String username, String password) {
-        super(Connection.Factory.create());
-
+        setEndpoint(Connection.Factory.create());
         getEndpoint().collect(protonCollector);
 
         this.transport = transport;
@@ -175,6 +174,7 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     public AmqpSession createSession() throws Exception {
         checkClosed();
 
+        final AmqpSession session = new AmqpSession(AmqpConnection.this);
         final ClientFuture request = new ClientFuture();
         serializer.execute(new Runnable() {
 
@@ -182,14 +182,16 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             public void run() {
                 checkClosed();
 
-                AmqpSession session = new AmqpSession(AmqpConnection.this, getEndpoint().session());
+                session.setEndpoint(getEndpoint().session());
                 session.open(request);
 
                 pumpToProtonTransport();
             }
         });
 
-        return (AmqpSession) request.sync();
+        request.sync();
+
+        return session;
     }
 
     /**
@@ -272,7 +274,6 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             fireClientException(e);
         }
     }
-
 
     //----- Transport listener event hooks -----------------------------------//
 

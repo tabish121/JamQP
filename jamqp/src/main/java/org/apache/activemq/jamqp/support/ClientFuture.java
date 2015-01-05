@@ -27,7 +27,6 @@ public class ClientFuture extends WrappedAsyncResult {
 
     protected final CountDownLatch latch = new CountDownLatch(1);
     protected Throwable error;
-    protected Object result;
 
     public ClientFuture() {
         super(null);
@@ -50,15 +49,9 @@ public class ClientFuture extends WrappedAsyncResult {
     }
 
     @Override
-    public void onSuccess(Object result) {
-        this.result = result;
-        latch.countDown();
-        super.onSuccess(result);
-    }
-
-    @Override
     public void onSuccess() {
-        onSuccess(null);
+        latch.countDown();
+        super.onSuccess();
     }
 
     /**
@@ -69,11 +62,9 @@ public class ClientFuture extends WrappedAsyncResult {
      * @param unit
      *        The unit to use for this wait period.
      *
-     * @return the result of this operation or null if the wait timed out.
-     *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public Object sync(long amount, TimeUnit unit) throws IOException {
+    public void sync(long amount, TimeUnit unit) throws IOException {
         try {
             latch.await(amount, unit);
         } catch (InterruptedException e) {
@@ -81,17 +72,15 @@ public class ClientFuture extends WrappedAsyncResult {
             throw IOExceptionSupport.create(e);
         }
 
-        return getOrfailOnError();
+        failOnError();
     }
 
     /**
      * Waits for a response to some pending operation.
      *
-     * @return the response from the remote peer for this operation.
-     *
      * @throws IOException if an error occurs while waiting for the response.
      */
-    public Object sync() throws IOException {
+    public void sync() throws IOException {
         try {
             latch.await();
         } catch (InterruptedException e) {
@@ -99,14 +88,13 @@ public class ClientFuture extends WrappedAsyncResult {
             throw IOExceptionSupport.create(e);
         }
 
-        return getOrfailOnError();
+        failOnError();
     }
 
-    private Object getOrfailOnError() throws IOException {
+    private void failOnError() throws IOException {
         Throwable cause = error;
         if (cause != null) {
             throw IOExceptionSupport.create(cause);
         }
-        return result;
     }
 }

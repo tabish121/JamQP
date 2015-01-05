@@ -43,16 +43,6 @@ public abstract class AmqpAbstractResource<E extends Endpoint> implements AmqpRe
 
     private E endpoint;
 
-    /**
-     * Creates a new instance with the JmsResource provided, and sets the Endpoint to the given value.
-     *
-     * @param endpoint
-     *        The Proton Endpoint instance that this object maps to.
-     */
-    public AmqpAbstractResource(E endpoint) {
-        setEndpoint(endpoint);
-    }
-
     @Override
     public void open(AsyncResult request) {
         this.openRequest = request;
@@ -73,7 +63,7 @@ public abstract class AmqpAbstractResource<E extends Endpoint> implements AmqpRe
     @Override
     public void opened() {
         if (this.openRequest != null) {
-            this.openRequest.onSuccess(this);
+            this.openRequest.onSuccess();
             this.openRequest = null;
         }
     }
@@ -119,9 +109,9 @@ public abstract class AmqpAbstractResource<E extends Endpoint> implements AmqpRe
     @Override
     public void failed(Exception cause) {
         if (openRequest != null) {
-            if(endpoint != null) {
-                //TODO: if this is a producer/consumer link then we may only be detached,
-                //rather than fully closed, and should respond appropriately.
+            if (endpoint != null) {
+                // TODO: if this is a producer/consumer link then we may only be detached,
+                // rather than fully closed, and should respond appropriately.
                 endpoint.close();
             }
             openRequest.onFailure(cause);
@@ -142,7 +132,7 @@ public abstract class AmqpAbstractResource<E extends Endpoint> implements AmqpRe
                 error = new IOException("Remote has closed without error information");
             }
 
-            if(endpoint != null) {
+            if (endpoint != null) {
                 // TODO: if this is a producer/consumer link then we may only be detached,
                 // rather than fully closed, and should respond appropriately.
                 endpoint.close();

@@ -31,15 +31,6 @@ public interface AsyncResult {
     void onFailure(Throwable result);
 
     /**
-     * If the operation succeeds the value that is produced as a result is
-     * set via this method.
-     *
-     * @param result
-     *        The value produced as a result of this asynchronous operation.
-     */
-    void onSuccess(Object result);
-
-    /**
      * If the operation succeeds the resulting value produced is set to null and
      * the waiting parties are signaled.
      */

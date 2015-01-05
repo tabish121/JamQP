@@ -16,8 +16,10 @@
  */
 package org.apache.activemq.jamqp;
 
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.apache.activemq.jamqp.support.ClientFuture;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Session;
 
@@ -36,9 +38,7 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
      * @param session
      *        The proton session that will be managed by this class.
      */
-    public AmqpSession(AmqpConnection connection, Session session) {
-        super(session);
-
+    public AmqpSession(AmqpConnection connection) {
         this.connection = connection;
     }
 
@@ -52,8 +52,29 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
      *
      * @throws Exception if an error occurs while creating the sender.
      */
-    public AmqpSender createSender(String address) throws Exception {
-        return null;
+    public AmqpSender createSender(final String address) throws Exception {
+        checkClosed();
+
+        final AmqpSender sender = new AmqpSender(AmqpSession.this, address);
+        final ClientFuture request = new ClientFuture();
+
+        connection.getScheduler().execute(new Runnable() {
+
+            @Override
+            public void run() {
+                checkClosed();
+
+                // TODO - Better name;
+                sender.setEndpoint(getEndpoint().sender(UUID.randomUUID().toString()));
+                sender.open(request);
+
+                pumpToProtonTransport();
+            }
+        });
+
+        request.sync();
+
+        return sender;
     }
 
     /**
@@ -67,7 +88,28 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
      * @throws Exception if an error occurs while creating the receiver.
      */
     public AmqpReceiver createReceiver(String address) throws Exception {
-        return null;
+        checkClosed();
+
+        final AmqpReceiver receiver = new AmqpReceiver(AmqpSession.this, address);
+        final ClientFuture request = new ClientFuture();
+
+        connection.getScheduler().execute(new Runnable() {
+
+            @Override
+            public void run() {
+                checkClosed();
+
+                // TODO - Better name;
+                receiver.setEndpoint(getEndpoint().receiver(UUID.randomUUID().toString()));
+                receiver.open(request);
+
+                pumpToProtonTransport();
+            }
+        });
+
+        request.sync();
+
+        return receiver;
     }
 
     /**
@@ -89,5 +131,13 @@ public class AmqpSession extends AmqpAbstractResource<Session> {
 
     void pumpToProtonTransport() {
         connection.pumpToProtonTransport();
+    }
+
+    //----- Private implementation details -----------------------------------//
+
+    private void checkClosed() {
+        if (isClosed()) {
+            throw new IllegalStateException("Session is already closed");
+        }
     }
 }

@@ -24,6 +24,7 @@ import org.apache.qpid.proton.engine.Sender;
 public class AmqpSender extends AmqpAbstractResource<Sender> {
 
     private AmqpSession session;
+    private final String address;
 
     /**
      * Create a new sender instance.
@@ -33,10 +34,9 @@ public class AmqpSender extends AmqpAbstractResource<Sender> {
      * @param sender
      *        The proton sender that will be managed by this class.
      */
-    public AmqpSender(AmqpSession session, Sender sender) {
-        super(sender);
-
+    public AmqpSender(AmqpSession session, String address) {
         this.session = session;
+        this.address = address;
     }
 
     /**
@@ -44,5 +44,12 @@ public class AmqpSender extends AmqpAbstractResource<Sender> {
      */
     public AmqpSession getSession() {
         return session;
+    }
+
+    /**
+     * @return the assigned address of this sender.
+     */
+    public String getAddress() {
+        return address;
     }
 }

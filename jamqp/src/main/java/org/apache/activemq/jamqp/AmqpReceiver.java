@@ -23,20 +23,20 @@ import org.apache.qpid.proton.engine.Receiver;
  */
 public class AmqpReceiver extends AmqpAbstractResource<Receiver> {
 
-    private AmqpSession session;
+    private final AmqpSession session;
+    private final String address;
 
     /**
      * Create a new receiver instance.
      *
      * @param session
      * 		  The parent session that created the receiver.
-     * @param receiver
-     *        The proton receiver that will be managed by this class.
+     * @param address
+     *        The address that this receiver should listen on.
      */
-    public AmqpReceiver(AmqpSession session, Receiver receiver) {
-        super(receiver);
-
+    public AmqpReceiver(AmqpSession session, String address) {
         this.session = session;
+        this.address = address;
     }
 
     /**
@@ -44,5 +44,12 @@ public class AmqpReceiver extends AmqpAbstractResource<Receiver> {
      */
     public AmqpSession getSession() {
         return session;
+    }
+
+    /**
+     * @return the address that this receiver has been configured to listen on.
+     */
+    public String getAddress() {
+        return address;
     }
 }
