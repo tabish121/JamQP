@@ -17,16 +17,34 @@
 package org.apache.activemq.jamqp;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
+import org.apache.activemq.jamqp.support.AsyncResult;
+import org.apache.activemq.jamqp.support.ClientFuture;
+import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Sender;
+import org.apache.qpid.proton.message.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sender class that manages a Proton sender endpoint.
  */
 public class AmqpSender extends AmqpAbstractResource<Sender> {
 
-    private AmqpSession session;
+    private static final Logger LOG = LoggerFactory.getLogger(AmqpSender.class);
+    private static final byte[] EMPTY_BYTE_ARRAY = new byte[] {};
+
+    private final AmqpTransferTagGenerator tagGenerator = new AmqpTransferTagGenerator(true);
+
+    private final AmqpSession session;
     private final String address;
+
+    private boolean presettle;
+
+    private final Set<Delivery> pending = new LinkedHashSet<Delivery>();
+    private byte[] encodeBuffer = new byte[1024 * 8];
 
     /**
      * Create a new sender instance.
@@ -49,8 +67,23 @@ public class AmqpSender extends AmqpAbstractResource<Sender> {
      *
      * @throws IOException if an error occurs during the send.
      */
-    public void send(AmqpMessage message) throws IOException {
+    public void send(final AmqpMessage message) throws IOException {
+        final ClientFuture sendRequest = new ClientFuture();
 
+        session.getScheduler().execute(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    doSend(message, sendRequest);
+                } catch (Exception e) {
+                    session.getConnection().fireClientException(e);
+                }
+            }
+        });
+
+        // TODO - Send timeouts
+        sendRequest.sync();
     }
 
     /**
@@ -65,5 +98,79 @@ public class AmqpSender extends AmqpAbstractResource<Sender> {
      */
     public String getAddress() {
         return address;
+    }
+
+    //----- Sender configuration ---------------------------------------------//
+
+    /**
+     * @return will messages be settle on send.
+     */
+    public boolean isPresettle() {
+        return presettle;
+    }
+
+    /**
+     * Configure is sent messages are marked as settled on send, defaults to false.
+     *
+     * @param presettle
+     * 		  configure if this sender will presettle all sent messages.
+     */
+    public void setPresettle(boolean presettle) {
+        this.presettle = presettle;
+    }
+
+    //----- Private Sender implementation ------------------------------------//
+
+    private void doSend(AmqpMessage message, AsyncResult request) throws Exception {
+
+        LOG.trace("Producer sending message: {}", message);
+
+        byte[] tag = tagGenerator.getNextTag();
+        Delivery delivery = null;
+
+        if (presettle) {
+            delivery = getEndpoint().delivery(EMPTY_BYTE_ARRAY, 0, 0);
+        } else {
+            delivery = getEndpoint().delivery(tag, 0, tag.length);
+        }
+
+        delivery.setContext(request);
+
+        encodeAndSend(message.getWrappedMessage(), delivery);
+
+        if (presettle) {
+            delivery.settle();
+            request.onSuccess();
+        } else {
+            pending.add(delivery);
+            getEndpoint().advance();
+        }
+    }
+
+    private void encodeAndSend(Message message, Delivery delivery) throws IOException {
+
+        int encodedSize;
+        while (true) {
+            try {
+                encodedSize = message.encode(encodeBuffer, 0, encodeBuffer.length);
+                break;
+            } catch (java.nio.BufferOverflowException e) {
+                encodeBuffer = new byte[encodeBuffer.length * 2];
+            }
+        }
+
+        int sentSoFar = 0;
+
+        while (true) {
+            int sent = getEndpoint().send(encodeBuffer, sentSoFar, encodedSize - sentSoFar);
+            if (sent > 0) {
+                sentSoFar += sent;
+                if ((encodedSize - sentSoFar) == 0) {
+                    break;
+                }
+            } else {
+                LOG.warn("{} failed to send any data from current Message.", this);
+            }
+        }
     }
 }
