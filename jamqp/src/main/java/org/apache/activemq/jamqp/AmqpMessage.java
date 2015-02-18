@@ -21,6 +21,7 @@ import org.apache.qpid.proton.message.Message;
 
 public class AmqpMessage {
 
+    private AmqpReceiver receiver;
     private Message message;
     private Delivery delivery;
 
@@ -30,7 +31,9 @@ public class AmqpMessage {
      * @throws Exception if an error occurs during the accept.
      */
     public void accept() throws Exception {
-
+        if (receiver == null) {
+            throw new IllegalStateException("Can't accept non-received message.");
+        }
     }
 
     /**
@@ -39,7 +42,9 @@ public class AmqpMessage {
      * @throws Exception if an error occurs during the reject.
      */
     public void reject() throws Exception {
-
+        if (receiver == null) {
+            throw new IllegalStateException("Can't reject non-received message.");
+        }
     }
 
     /**
@@ -54,5 +59,12 @@ public class AmqpMessage {
      */
     public Message getWrappedMessage() {
         return message;
+    }
+
+    /**
+     * @return the AmqpReceiver that consumed this message.
+     */
+    public AmqpReceiver getAmqpReceiver() {
+        return receiver;
     }
 }
