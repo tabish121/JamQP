@@ -33,7 +33,7 @@ public class CramMD5Mechanism extends AbstractMechanism {
 
     private static final String ASCII = "ASCII";
     private static final String HMACMD5 = "HMACMD5";
-    private boolean _sentResponse;
+    private boolean sentResponse;
 
     @Override
     public int getPriority() {
@@ -52,7 +52,7 @@ public class CramMD5Mechanism extends AbstractMechanism {
 
     @Override
     public byte[] getChallengeResponse(byte[] challenge) throws SaslException {
-        if (!_sentResponse && challenge != null && challenge.length != 0) {
+        if (!sentResponse && challenge != null && challenge.length != 0) {
             try {
                 SecretKeySpec key = new SecretKeySpec(getPassword().getBytes(ASCII), HMACMD5);
                 Mac mac = Mac.getInstance(HMACMD5);
@@ -70,7 +70,7 @@ public class CramMD5Mechanism extends AbstractMechanism {
                     hash.append(hex);
                 }
 
-                _sentResponse = true;
+                sentResponse = true;
                 return hash.toString().getBytes(ASCII);
             } catch (UnsupportedEncodingException e) {
                 throw new SaslException("Unable to utilise required encoding", e);
