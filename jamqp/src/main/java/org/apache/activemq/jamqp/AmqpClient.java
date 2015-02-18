@@ -17,8 +17,12 @@
 package org.apache.activemq.jamqp;
 
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.activemq.jamqp.support.ClientTcpTransport;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +37,9 @@ public class AmqpClient {
     private String username;
     private String password;
     private URI remoteURI;
+
+    private List<Symbol> offeredCapabilities = Collections.emptyList();
+    private Map<Symbol, Object> offeredProperties = Collections.emptyMap();
 
     /**
      * Creates an AmqpClient instance which can be used as a factory for connections.
@@ -79,6 +86,9 @@ public class AmqpClient {
 
         AmqpConnection connection = new AmqpConnection(transport, username, password);
 
+        connection.setOfferedCapabilities(getOfferedCapabilities());
+        connection.setOfferedProperties(getOfferedProperties());
+
         LOG.info("Creating new connection to peer: {}", remoteURI);
         connection.connect();
 
@@ -104,6 +114,50 @@ public class AmqpClient {
      */
     public URI getRemoteURI() {
         return remoteURI;
+    }
+
+    /**
+     * Sets the offered capabilities that should be used when a new connection attempt
+     * is made.
+     *
+     * @param offeredCapabilities
+     *        the list of capabilities to offer when connecting.
+     */
+    public void setOfferedCapabilities(List<Symbol> offeredCapabilities) {
+        if (offeredCapabilities != null) {
+            offeredCapabilities = Collections.emptyList();
+        }
+
+        this.offeredCapabilities = offeredCapabilities;
+    }
+
+    /**
+     * @return an unmodifiable view of the currently set offered capabilities
+     */
+    public List<Symbol> getOfferedCapabilities() {
+        return Collections.unmodifiableList(offeredCapabilities);
+    }
+
+    /**
+     * Sets the offered connection properties that should be used when a new connection
+     * attempt is made.
+     *
+     * @param connectionProperties
+     *        the map of properties to offer when connecting.
+     */
+    public void setOfferedProperties(Map<Symbol, Object> offeredProperties) {
+        if (offeredProperties != null) {
+            offeredProperties = Collections.emptyMap();
+        }
+
+        this.offeredProperties = offeredProperties;
+    }
+
+    /**
+     * @return an unmodifiable view of the currently set connection properties.
+     */
+    public Map<Symbol, Object> getOfferedProperties() {
+        return Collections.unmodifiableMap(offeredProperties);
     }
 
     @Override

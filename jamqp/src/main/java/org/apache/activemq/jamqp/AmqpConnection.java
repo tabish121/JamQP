@@ -3,6 +3,9 @@ package org.apache.activemq.jamqp;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -13,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.activemq.jamqp.sasl.SaslAuthenticator;
 import org.apache.activemq.jamqp.support.ClientFuture;
 import org.apache.activemq.jamqp.support.ClientTcpTransport;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
@@ -44,6 +48,8 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     private final String username;
     private final String password;
     private final URI remoteURI;
+    private List<Symbol> offeredCapabilities = Collections.emptyList();
+    private Map<Symbol, Object> offeredProperties = Collections.emptyMap();
 
     private AmqpClientListener listener;
     private SaslAuthenticator authenticator;
@@ -87,6 +93,12 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
             public void run() {
                 getEndpoint().setContainer(safeGetContainerId());
                 getEndpoint().setHostname(remoteURI.getHost());
+                if (!getOfferedCapabilities().isEmpty()) {
+                    getEndpoint().setOfferedCapabilities(getOfferedCapabilities().toArray(new Symbol[0]));
+                }
+                if (!getOfferedProperties().isEmpty()) {
+                    getEndpoint().setProperties(getOfferedProperties());
+                }
 
                 protonTransport.setMaxFrameSize(getMaxFrameSize());
                 protonTransport.setChannelMax(getChannelMax());
@@ -249,6 +261,30 @@ public class AmqpConnection extends AmqpAbstractResource<Connection> implements 
     }
 
     //----- Internal getters used from the child AmqpResource classes --------//
+
+    List<Symbol> getOfferedCapabilities() {
+        return offeredCapabilities;
+    }
+
+    void setOfferedCapabilities(List<Symbol> offeredCapabilities) {
+        if (offeredCapabilities != null) {
+            offeredCapabilities = Collections.emptyList();
+        }
+
+        this.offeredCapabilities = offeredCapabilities;
+    }
+
+    Map<Symbol, Object> getOfferedProperties() {
+        return offeredProperties;
+    }
+
+    void setOfferedProperties(Map<Symbol, Object> offeredProperties) {
+        if (offeredProperties != null) {
+            offeredProperties = Collections.emptyMap();
+        }
+
+        this.offeredProperties = offeredProperties;
+    }
 
     ScheduledExecutorService getScheduler() {
         return this.serializer;
